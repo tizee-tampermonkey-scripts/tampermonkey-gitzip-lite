@@ -2,7 +2,7 @@
 // @name         GitZip Lite
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=github.com
 // @namespace    https://github.com/tizee/tempermonkey-gitzip-lite
-// @version      1.1
+// @version      1.2
 // @description  Download selected files and folders from GitHub repositories.
 // @author       tizee
 // @match        https://github.com/*/*
@@ -12,6 +12,7 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_addStyle
+// @grant        GM_registerMenuCommand
 // @connect      api.github.com
 // @run-at       document-end
 // ==/UserScript==
@@ -36,8 +37,8 @@
             const path = matches[7] || '';
 
             const rootUrl = branch ?
-                `https://github.com/${author}/${project}/tree/${branch}` :
-                `https://github.com/${author}/${project}`;
+                  `https://github.com/${author}/${project}/tree/${branch}` :
+            `https://github.com/${author}/${project}`;
 
             if (!type && (repoUrl.length - rootUrl.length > 1)) {
                 return null;
@@ -228,44 +229,6 @@
             logToggleButton.textContent = logWindow.hidden ? 'Show Log' : 'Hide Log';
         });
 
-        // Token Input
-        const tokenInput = document.createElement('input');
-        tokenInput.type = 'password';
-        tokenInput.placeholder = 'GitHub API Token';
-        tokenInput.id = 'github-token-input';
-        tokenInput.setAttribute('aria-label', 'GitHub API Token');
-        tokenInput.style.marginBottom = '0.5rem';
-        tokenInput.style.padding = '0.3rem';
-        tokenInput.style.border = '1px solid #ccc';
-        tokenInput.style.borderRadius = '4px';
-
-        // Load saved token
-        tokenInput.value = GM_getValue(tokenKey);
-
-        // Save Button
-        const saveButton = document.createElement('button');
-        saveButton.textContent = 'Save Token';
-        saveButton.style.cssText = defaultButtonStyle;
-        saveButton.addEventListener('click', () => {
-            GM_setValue(tokenKey, tokenInput.value);
-            tokenInput.type = 'password'; // Hide after saving
-            showTokenButton.textContent = 'Show Token';
-        });
-
-        // Show/Hide Button
-        const showTokenButton = document.createElement('button');
-        showTokenButton.textContent = 'Show Token';
-        showTokenButton.style.cssText = defaultButtonStyle;
-        showTokenButton.addEventListener('click', () => {
-            if (tokenInput.type === 'password') {
-                tokenInput.type = 'text';
-                showTokenButton.textContent = 'Hide Token';
-            } else {
-                tokenInput.type = 'password';
-                showTokenButton.textContent = 'Show Token';
-            }
-        });
-
         // Download Button
         const downloadButton = document.createElement('button');
         downloadButton.textContent = 'Download Selected';
@@ -280,9 +243,6 @@
 
         form.appendChild(logToggleButton);
         form.appendChild(logWindow);
-        form.appendChild(tokenInput);
-        form.appendChild(saveButton);
-        form.appendChild(showTokenButton);
         form.appendChild(downloadButton);
 
         mainContainer.appendChild(form);
@@ -358,8 +318,8 @@
 
                 zip.generateAsync({ type: "blob" })
                     .then(content => {
-                        saveAs(content, [resolvedUrl.project].concat(resolvedUrl.path.split('/')).join('-') + ".zip");
-                    });
+                    saveAs(content, [resolvedUrl.project].concat(resolvedUrl.path.split('/')).join('-') + ".zip");
+                });
 
             } catch (error) {
                 console.debug("Error zipping files:", error);
@@ -372,21 +332,20 @@
         const { files: selectedFiles, folders: selectedFolders } = collectSelectedItems();
 
         if (selectedFiles.length === 0 && selectedFolders.length === 0) {
-            console.debug('No files or folders selected.');
+            logMessage('No files or folders selected.');
             return;
         }
 
         const resolvedUrl = parseRepoURL(window.location.href);
         if (!resolvedUrl) {
-            console.debug("Could not resolve repository URL.");
+            logMessage("Could not resolve repository URL.");
             return;
         }
 
-        const tokenInput = document.getElementById('github-token-input');
-        const githubToken = tokenInput.value;
+        const githubToken = GM_getValue(tokenKey);
 
         if (!githubToken) {
-            console.debug("GitHub API token is required.");
+            logMessage("GitHub API token is not set. Please set it in the Tampermonkey dashboard.");
             return;
         }
 
@@ -448,6 +407,15 @@
         zipAndDownload(allContents, resolvedUrl);
         logMessage("Download complete.");
     }
+
+    // Register menu command for setting token
+    GM_registerMenuCommand('Set GitHub API Token', () => {
+        const token = prompt('Enter your GitHub API token:');
+        if (token) {
+            GM_setValue(tokenKey, token);
+            alert('Token saved successfully!');
+        }
+    });
 
     function onDomLoaded() {
         addCheckboxes();

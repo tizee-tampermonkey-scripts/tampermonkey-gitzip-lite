@@ -22,3 +22,7 @@ GitZip Lite is a Tampermonkey script that simplifies downloading files and folde
 
 - A GitHub API token is recommended to avoid rate limits. You can create one at [https://github.com/settings/personal-access-tokens](https://github.com/settings/personal-access-tokens).  It only needs `public_repo` scope.
 - The script logs actions to a text area at the bottom right.
+
+## Acknowledgement
+
+- GitZip extension for inspiration
