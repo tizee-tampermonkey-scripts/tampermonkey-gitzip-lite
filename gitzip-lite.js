@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GitZip Lite
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=github.com
-// @namespace    https://github.com/tizee/gitzip-lite
+// @namespace    https://github.com/tizee/tempermonkey-gitzip-lite
 // @version      1.0
 // @description  Download selected files and folders from GitHub repositories.
 // @author       tizee
