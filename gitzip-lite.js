@@ -2,7 +2,7 @@
 // @name         GitZip Lite
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=github.com
 // @namespace    https://github.com/tizee/tempermonkey-gitzip-lite
-// @version      1.0
+// @version      1.1
 // @description  Download selected files and folders from GitHub repositories.
 // @author       tizee
 // @match        https://github.com/*/*
@@ -19,12 +19,8 @@
 (function() {
     'use strict';
 
-    // Inject Tailwind CSS
-    GM_addStyle(`@import url('https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css');`);
-
     const itemCollectSelector = "div.js-navigation-item, table tbody tr.react-directory-row > td[class$='cell-large-screen']";
     const tokenKey = 'githubApiToken';
-
 
     const { parseRepoURL, getGitURL, getInfoURL } = {
         parseRepoURL: (repoUrl) => { // mock implementation
@@ -135,10 +131,18 @@
             if (row.querySelector('.gitziplite-check-wrap')) return;
 
             // Ensure the row is relatively positioned
-            row.classList.add('relative');
+            row.style.position = 'relative';
 
             const checkboxContainer = document.createElement('div');
-            checkboxContainer.classList.add('gitziplite-check-wrap', 'absolute', 'left-0', 'top-0', 'h-full', 'hidden', 'items-center');
+            checkboxContainer.classList.add('gitziplite-check-wrap');
+            checkboxContainer.style.position = 'absolute';
+            checkboxContainer.style.left = '4px';
+            checkboxContainer.style.top = '50%';
+            checkboxContainer.style.transform = 'translateY(-50%)';
+            checkboxContainer.style.display = 'flex';
+            checkboxContainer.style.alignItems = 'center';
+            checkboxContainer.style.height = '100%';
+            checkboxContainer.style.display = 'none';
 
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
@@ -156,14 +160,12 @@
 
             // Add event listeners for hover
             row.addEventListener('mouseenter', () => {
-                checkboxContainer.classList.remove('hidden');
-                checkboxContainer.classList.add('flex');
+                checkboxContainer.style.display = 'flex';
             });
 
             row.addEventListener('mouseleave', () => {
                 if (!checkbox.checked) {
-                    checkboxContainer.classList.remove('flex');
-                    checkboxContainer.classList.add('hidden');
+                    checkboxContainer.style.display = 'none';
                 }
             });
 
@@ -188,68 +190,72 @@
     let logWindow;
     let logToggleButton;
 
+    // Define default button styles
+    const defaultButtonStyle = `
+        border: 1px solid #ccc;
+        padding: 0.3rem 0.6rem;
+        cursor: pointer;
+        margin-bottom: 0.5rem;
+    `;
+
     function createDownloadButton() {
         // Main container
         const mainContainer = document.createElement('div');
-        mainContainer.classList.add('fixed', 'bottom-5', 'right-5', 'z-1000', 'flex', 'items-end', 'flex-col', 'md:flex-row', 'gap-2', 'p-4');
+        mainContainer.style.position = 'fixed';
+        mainContainer.style.bottom = '1rem';
+        mainContainer.style.right = '1rem';
+        mainContainer.style.zIndex = '1000';
 
         // Log Window
         logWindow = document.createElement('textarea');
-        logWindow.classList.add('w-full', 'h-48', 'mr-2', 'p-1', 'border', 'border-gray-300', 'rounded', 'resize-none', 'overflow-auto', 'hidden'); // Initial state: hidden
+        logWindow.setAttribute('aria-label', 'Log Window');
+        logWindow.style.width = '100%';
+        logWindow.style.height = '10rem';
+        logWindow.style.marginBottom = '0.5rem';
+        logWindow.style.resize = 'none';
+        logWindow.style.overflow = 'auto';
         logWindow.readOnly = true;
+        logWindow.hidden = true;
+        logWindow.style.border = '1px solid #ccc';
+        logWindow.style.padding = '0.2rem';
 
         // Log Toggle Button
         logToggleButton = document.createElement('button');
-        logToggleButton.textContent = 'Show Log'; // Initial state
-        logToggleButton.classList.add('mb-1', 'bg-gray-200', 'hover:bg-gray-300', 'text-gray-800', 'font-bold', 'py-2', 'px-4', 'rounded');
+        logToggleButton.textContent = 'Show Log';
+        logToggleButton.style.cssText = defaultButtonStyle;
         logToggleButton.addEventListener('click', () => {
-            if (logWindow.classList.contains('hidden')) {
-                logWindow.classList.remove('hidden');
-                logWindow.classList.add('md:block'); // Add md:block when showing
-                logToggleButton.textContent = 'Hide Log';
-            } else {
-                logWindow.classList.remove('md:block'); // Remove md:block when hiding
-                logWindow.classList.add('hidden');
-                logToggleButton.textContent = 'Show Log';
-            }
+            logWindow.hidden = !logWindow.hidden;
+            logToggleButton.textContent = logWindow.hidden ? 'Show Log' : 'Hide Log';
         });
-
-        const logContainer = document.createElement('div');
-        logContainer.classList.add('flex', 'flex-col', 'items-start');
-        logContainer.appendChild(logToggleButton);
-        logContainer.appendChild(logWindow);
-
-        mainContainer.appendChild(logContainer);
-
-        // Buttons Container
-        const buttonsContainer = document.createElement('div');
-        buttonsContainer.classList.add('flex', 'flex-col', 'gap-1');
 
         // Token Input
         const tokenInput = document.createElement('input');
         tokenInput.type = 'password';
         tokenInput.placeholder = 'GitHub API Token';
         tokenInput.id = 'github-token-input';
-        tokenInput.classList.add('shadow', 'appearance-none', 'border', 'rounded', 'py-2', 'px-3', 'text-gray-700', 'leading-tight', 'focus:outline-none', 'focus:shadow-outline', 'w-full');
+        tokenInput.setAttribute('aria-label', 'GitHub API Token');
+        tokenInput.style.marginBottom = '0.5rem';
+        tokenInput.style.padding = '0.3rem';
+        tokenInput.style.border = '1px solid #ccc';
+        tokenInput.style.borderRadius = '4px';
+
         // Load saved token
         tokenInput.value = GM_getValue(tokenKey);
-        buttonsContainer.appendChild(tokenInput);
 
         // Save Button
         const saveButton = document.createElement('button');
         saveButton.textContent = 'Save Token';
-        saveButton.classList.add('bg-blue-500', 'hover:bg-blue-700', 'text-white', 'font-bold', 'py-2', 'px-4', 'rounded', 'focus:outline-none', 'focus:shadow-outline');
+        saveButton.style.cssText = defaultButtonStyle;
         saveButton.addEventListener('click', () => {
             GM_setValue(tokenKey, tokenInput.value);
             tokenInput.type = 'password'; // Hide after saving
             showTokenButton.textContent = 'Show Token';
         });
-        buttonsContainer.appendChild(saveButton);
 
         // Show/Hide Button
         const showTokenButton = document.createElement('button');
         showTokenButton.textContent = 'Show Token';
-        showTokenButton.classList.add('bg-gray-200', 'hover:bg-gray-300', 'text-gray-800', 'font-bold', 'py-2', 'px-4', 'rounded');
+        showTokenButton.style.cssText = defaultButtonStyle;
         showTokenButton.addEventListener('click', () => {
             if (tokenInput.type === 'password') {
                 tokenInput.type = 'text';
@@ -259,17 +265,27 @@
                 showTokenButton.textContent = 'Show Token';
             }
         });
-        buttonsContainer.appendChild(showTokenButton);
 
         // Download Button
         const downloadButton = document.createElement('button');
         downloadButton.textContent = 'Download Selected';
-        downloadButton.classList.add('bg-green-500', 'hover:bg-green-700', 'text-white', 'font-bold', 'py-2', 'px-4', 'rounded', 'focus:outline-none', 'focus:shadow-outline');
+        downloadButton.style.cssText = defaultButtonStyle;
         downloadButton.addEventListener('click', downloadSelected);
-        buttonsContainer.appendChild(downloadButton);
 
-        mainContainer.appendChild(buttonsContainer);
+        // Assemble the UI
+        const form = document.createElement('div');
+        form.style.display = 'flex';
+        form.style.flexDirection = 'column';
+        form.style.gap = '0.5rem';
 
+        form.appendChild(logToggleButton);
+        form.appendChild(logWindow);
+        form.appendChild(tokenInput);
+        form.appendChild(saveButton);
+        form.appendChild(showTokenButton);
+        form.appendChild(downloadButton);
+
+        mainContainer.appendChild(form);
         document.body.appendChild(mainContainer);
     }
 
