@@ -15,6 +15,7 @@
 // @grant        GM_registerMenuCommand
 // @connect      api.github.com
 // @run-at       document-end
+// @license      MIT
 // ==/UserScript==
 
 (function() {
