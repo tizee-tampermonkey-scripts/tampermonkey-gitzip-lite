@@ -2,7 +2,7 @@
 // @name         GitZip Lite
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=github.com
 // @namespace    https://github.com/tizee/tempermonkey-gitzip-lite
-// @version      1.2
+// @version      1.3
 // @description  Download selected files and folders from GitHub repositories.
 // @author       tizee
 // @match        https://github.com/*/*
@@ -168,6 +168,18 @@
                 if (!checkbox.checked) {
                     checkboxContainer.style.display = 'none';
                 }
+            });
+
+
+            row.addEventListener('dblclick', () => {
+                console.debug("double click", row, checkbox);
+                if (checkbox.checked) {
+                    checkboxContainer.style.display = 'none';
+                } else {
+                    checkboxContainer.style.display = 'flex';
+                }
+               checkbox.checked = !checkbox.checked;
+                checkbox.dispatchEvent(new Event('change'));
             });
 
             // Add event listener for checkbox change
