@@ -2,12 +2,13 @@
 // @name         GitZip Lite
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=github.com
 // @namespace    https://github.com/tizee/tempermonkey-gitzip-lite
-// @version      1.3
+// @version      1.4
 // @description  Download selected files and folders from GitHub repositories.
 // @author       tizee
 // @match        https://github.com/*/*
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
+// @require      https://unpkg.com/powerglitch@2.4.0/dist/powerglitch.min.js
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -25,7 +26,7 @@
     const tokenKey = 'githubApiToken';
 
     const { parseRepoURL, getGitURL, getInfoURL } = {
-        parseRepoURL: (repoUrl) => { // mock implementation
+        parseRepoURL: (repoUrl) => {
             const repoExp = new RegExp("^https://github.com/([^/]+)/([^/]+)(/(tree|blob)/([^/]+)(/(.*))?)?");
             const matches = repoUrl.match(repoExp);
 
@@ -179,7 +180,7 @@
                 } else {
                     checkboxContainer.style.display = 'flex';
                 }
-               checkbox.checked = !checkbox.checked;
+                checkbox.checked = !checkbox.checked;
                 checkbox.dispatchEvent(new Event('change'));
             });
 
@@ -203,6 +204,7 @@
 
     let logWindow;
     let logToggleButton;
+    let downloadButton;
 
     // Define default button styles
     const defaultButtonStyle = `
@@ -243,10 +245,11 @@
         });
 
         // Download Button
-        const downloadButton = document.createElement('button');
+        downloadButton = document.createElement('button');
         downloadButton.textContent = 'Download Selected';
         downloadButton.style.cssText = defaultButtonStyle;
         downloadButton.addEventListener('click', downloadSelected);
+
 
         // Assemble the UI
         const form = document.createElement('div');
@@ -441,6 +444,38 @@
 
     // Initialize
     onDomLoaded();
+    // Glitch Animation
+    PowerGlitch.glitch(logToggleButton, {
+        playMode: 'click',
+        timing: {
+            duration: 400,
+            easing: 'ease-in-out',
+        },
+        shake: {
+            velocity: 20,
+            amplitudeX: 0,
+            amplitudeY: 0.1
+        },
+    });
+    PowerGlitch.glitch(logWindow,{
+        playMode: 'hover',
+        timing: {
+            duration: 450,
+            easing: 'ease-in-out',
+        },
+        shake: {
+            velocity: 20,
+            amplitudeX: 0.1,
+            amplitudeY: 0
+        },
+    });
+    PowerGlitch.glitch(downloadButton, {
+        playMode: 'click',
+        timing: {
+            duration: 400,
+            easing: 'ease-in-out',
+        },
+    });
 
     // Observe GitHub repository page URL changes (e.g., navigating into a new directory)
     const observer = new MutationObserver(onUrlChange);
