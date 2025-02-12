@@ -2,7 +2,7 @@
 // @name         GitZip Lite
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=github.com
 // @namespace    https://github.com/tizee/tempermonkey-gitzip-lite
-// @version      1.4
+// @version      1.5
 // @description  Download selected files and folders from GitHub repositories.
 // @author       tizee
 // @match        https://github.com/*/*
@@ -15,19 +15,22 @@
 // @grant        GM_addStyle
 // @grant        GM_registerMenuCommand
 // @connect      api.github.com
+// @connect      raw.githubusercontent.com
 // @run-at       document-end
-// @license      MIT
 // ==/UserScript==
 
-(function() {
-    'use strict';
+(function () {
+    "use strict";
 
-    const itemCollectSelector = "div.js-navigation-item, table tbody tr.react-directory-row > td[class$='cell-large-screen']";
-    const tokenKey = 'githubApiToken';
+    const itemCollectSelector =
+          "div.js-navigation-item, table tbody tr.react-directory-row > td[class$='cell-large-screen']";
+    const tokenKey = "githubApiToken";
 
     const { parseRepoURL, getGitURL, getInfoURL } = {
         parseRepoURL: (repoUrl) => {
-            const repoExp = new RegExp("^https://github.com/([^/]+)/([^/]+)(/(tree|blob)/([^/]+)(/(.*))?)?");
+            const repoExp = new RegExp(
+                "^https://github.com/([^/]+)/([^/]+)(/(tree|blob)/([^/]+)(/(.*))?)?"
+            );
             const matches = repoUrl.match(repoExp);
 
             if (!matches || matches.length === 0) return null;
@@ -36,13 +39,13 @@
             const project = matches[2];
             const branch = matches[5];
             const type = matches[4];
-            const path = matches[7] || '';
+            const path = matches[7] || "";
 
-            const rootUrl = branch ?
-                  `https://github.com/${author}/${project}/tree/${branch}` :
-            `https://github.com/${author}/${project}`;
+            const rootUrl = branch
+            ? `https://github.com/${author}/${project}/tree/${branch}`
+        : `https://github.com/${author}/${project}`;
 
-            if (!type && (repoUrl.length - rootUrl.length > 1)) {
+            if (!type && repoUrl.length - rootUrl.length > 1) {
                 return null;
             }
 
@@ -53,29 +56,29 @@
                 type,
                 path,
                 inputUrl: repoUrl,
-                rootUrl
+                rootUrl,
             };
         },
-        getGitURL: (author, project, type, sha) => { // mock implementation
+        getGitURL: (author, project, type, sha) => {
             if (type === "blob" || type === "tree") {
                 const pluralType = type + "s";
                 return `https://api.github.com/repos/${author}/${project}/git/${pluralType}/${sha}`;
             }
             return null;
         },
-        getInfoURL: (author, project, path, branch) => { // mock implementation
+        getInfoURL: (author, project, path, branch) => {
             let url = `https://api.github.com/repos/${author}/${project}/contents/${path}`;
             if (branch) {
                 url += `?ref=${branch}`;
             }
             return url;
-        }
+        },
     };
 
     // --- GitZip Functions ---
 
     function base64toBlob(base64Data, contentType) {
-        contentType = contentType || '';
+        contentType = contentType || "";
         const sliceSize = 1024;
         const byteCharacters = atob(base64Data);
         const bytesLength = byteCharacters.length;
@@ -95,16 +98,16 @@
         return new Blob(byteArrays, { type: contentType });
     }
 
-    function callAjax(url, token){
-        return new Promise(function(resolve, reject){
+    function callAjax(url, token) {
+        return new Promise(function (resolve, reject) {
             GM_xmlhttpRequest({
                 method: "GET",
                 url: url,
                 headers: {
-                    "Authorization": token ? "token " + token : undefined,
-                    "Accept": "application/json"
+                    Authorization: token ? "token " + token : undefined,
+                    Accept: "application/json",
                 },
-                onload: function(response) {
+                onload: function (response) {
                     if (response.status >= 200 && response.status < 300) {
                         try {
                             const jsonResponse = JSON.parse(response.responseText);
@@ -118,10 +121,33 @@
                         reject(response);
                     }
                 },
-                onerror: function(error) {
+                onerror: function (error) {
                     console.debug("Request failed:", error);
                     reject(error);
-                }
+                },
+            });
+        });
+    }
+
+    // New dedicated function for binary downloads
+    function downloadFile(url, token) {
+        return new Promise(function (resolve, reject) {
+            GM_xmlhttpRequest({
+                method: "GET",
+                url: url,
+                responseType: "arraybuffer",
+                headers: {
+                    Authorization: token ? "token " + token : undefined,
+                    Accept: "application/octet-stream",
+                },
+                onload: function (response) {
+                    if (response.status >= 200 && response.status < 300) {
+                        resolve(new Uint8Array(response.response));
+                    } else {
+                        reject(new Error(`Download failed: ${response.status}`));
+                    }
+                },
+                onerror: reject,
             });
         });
     }
@@ -130,26 +156,26 @@
 
     function addCheckboxes() {
         const fileRows = document.querySelectorAll(itemCollectSelector);
-        fileRows.forEach(row => {
-            if (row.querySelector('.gitziplite-check-wrap')) return;
+        fileRows.forEach((row) => {
+            if (row.querySelector(".gitziplite-check-wrap")) return;
 
             // Ensure the row is relatively positioned
-            row.style.position = 'relative';
+            row.style.position = "relative";
 
-            const checkboxContainer = document.createElement('div');
-            checkboxContainer.classList.add('gitziplite-check-wrap');
-            checkboxContainer.style.position = 'absolute';
-            checkboxContainer.style.left = '4px';
-            checkboxContainer.style.top = '50%';
-            checkboxContainer.style.transform = 'translateY(-50%)';
-            checkboxContainer.style.display = 'flex';
-            checkboxContainer.style.alignItems = 'center';
-            checkboxContainer.style.height = '100%';
-            checkboxContainer.style.display = 'none';
+            const checkboxContainer = document.createElement("div");
+            checkboxContainer.classList.add("gitziplite-check-wrap");
+            checkboxContainer.style.position = "absolute";
+            checkboxContainer.style.left = "4px";
+            checkboxContainer.style.top = "50%";
+            checkboxContainer.style.transform = "translateY(-50%)";
+            checkboxContainer.style.display = "flex";
+            checkboxContainer.style.alignItems = "center";
+            checkboxContainer.style.height = "100%";
+            checkboxContainer.style.display = "none";
 
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.classList.add('gitziplite-checkbox');
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.classList.add("gitziplite-checkbox");
 
             checkboxContainer.appendChild(checkbox);
 
@@ -162,40 +188,41 @@
             }
 
             // Add event listeners for hover
-            row.addEventListener('mouseenter', () => {
-                checkboxContainer.style.display = 'flex';
+            row.addEventListener("mouseenter", () => {
+                checkboxContainer.style.display = "flex";
             });
 
-            row.addEventListener('mouseleave', () => {
+            row.addEventListener("mouseleave", () => {
                 if (!checkbox.checked) {
-                    checkboxContainer.style.display = 'none';
+                    checkboxContainer.style.display = "none";
                 }
             });
 
-
-            row.addEventListener('dblclick', () => {
+            row.addEventListener("dblclick", () => {
                 console.debug("double click", row, checkbox);
                 if (checkbox.checked) {
-                    checkboxContainer.style.display = 'none';
+                    checkboxContainer.style.display = "none";
                 } else {
-                    checkboxContainer.style.display = 'flex';
+                    checkboxContainer.style.display = "flex";
                 }
                 checkbox.checked = !checkbox.checked;
-                checkbox.dispatchEvent(new Event('change'));
+                checkbox.dispatchEvent(new Event("change"));
             });
 
             // Add event listener for checkbox change
-            checkbox.addEventListener('change', () => {
+            checkbox.addEventListener("change", () => {
                 let link;
-                if (row.tagName === 'TD') {
-                    link = row.querySelector('a[href]');
+                if (row.tagName === "TD") {
+                    link = row.querySelector("a[href]");
                 } else {
-                    link = row.querySelector('a[href]');
+                    link = row.querySelector("a[href]");
                 }
 
                 if (link) {
                     const title = link.textContent.trim();
-                    const message = checkbox.checked ? `Selected: ${title}` : `Unselected: ${title}`;
+                    const message = checkbox.checked
+                    ? `Selected: ${title}`
+            : `Unselected: ${title}`;
                     logMessage(message);
                 }
             });
@@ -216,46 +243,45 @@
 
     function createDownloadButton() {
         // Main container
-        const mainContainer = document.createElement('div');
-        mainContainer.style.position = 'fixed';
-        mainContainer.style.bottom = '1rem';
-        mainContainer.style.right = '1rem';
-        mainContainer.style.zIndex = '1000';
+        const mainContainer = document.createElement("div");
+        mainContainer.style.position = "fixed";
+        mainContainer.style.bottom = "1rem";
+        mainContainer.style.right = "1rem";
+        mainContainer.style.zIndex = "1000";
 
         // Log Window
-        logWindow = document.createElement('textarea');
-        logWindow.setAttribute('aria-label', 'Log Window');
-        logWindow.style.width = '100%';
-        logWindow.style.height = '10rem';
-        logWindow.style.marginBottom = '0.5rem';
-        logWindow.style.resize = 'none';
-        logWindow.style.overflow = 'auto';
+        logWindow = document.createElement("textarea");
+        logWindow.setAttribute("aria-label", "Log Window");
+        logWindow.style.width = "100%";
+        logWindow.style.height = "10rem";
+        logWindow.style.marginBottom = "0.5rem";
+        logWindow.style.resize = "none";
+        logWindow.style.overflow = "auto";
         logWindow.readOnly = true;
         logWindow.hidden = true;
-        logWindow.style.border = '1px solid #ccc';
-        logWindow.style.padding = '0.2rem';
+        logWindow.style.border = "1px solid #ccc";
+        logWindow.style.padding = "0.2rem";
 
         // Log Toggle Button
-        logToggleButton = document.createElement('button');
-        logToggleButton.textContent = 'Show Log';
+        logToggleButton = document.createElement("button");
+        logToggleButton.textContent = "Show Log";
         logToggleButton.style.cssText = defaultButtonStyle;
-        logToggleButton.addEventListener('click', () => {
+        logToggleButton.addEventListener("click", () => {
             logWindow.hidden = !logWindow.hidden;
-            logToggleButton.textContent = logWindow.hidden ? 'Show Log' : 'Hide Log';
+            logToggleButton.textContent = logWindow.hidden ? "Show Log" : "Hide Log";
         });
 
         // Download Button
-        downloadButton = document.createElement('button');
-        downloadButton.textContent = 'Download Selected';
+        downloadButton = document.createElement("button");
+        downloadButton.textContent = "Download Selected";
         downloadButton.style.cssText = defaultButtonStyle;
-        downloadButton.addEventListener('click', downloadSelected);
-
+        downloadButton.addEventListener("click", downloadSelected);
 
         // Assemble the UI
-        const form = document.createElement('div');
-        form.style.display = 'flex';
-        form.style.flexDirection = 'column';
-        form.style.gap = '0.5rem';
+        const form = document.createElement("div");
+        form.style.display = "flex";
+        form.style.flexDirection = "column";
+        form.style.gap = "0.5rem";
 
         form.appendChild(logToggleButton);
         form.appendChild(logWindow);
@@ -266,20 +292,22 @@
     }
 
     function logMessage(message) {
-        logWindow.value += message + '\n';
+        logWindow.value += message + "\n";
         logWindow.scrollTop = logWindow.scrollHeight; // Auto-scroll to bottom
     }
 
     /**
-     * Collects selected files and folders from the DOM.
-     * @returns {{files: [], folders: []}} - An object containing arrays of selected files and folders.
-     */
+   * Collects selected files and folders from the DOM.
+   * @returns {{files: [], folders: []}} - An object containing arrays of selected files and folders.
+   */
     function collectSelectedItems() {
         const selectedFiles = [];
         const selectedFolders = [];
-        const checkboxes = document.querySelectorAll('.gitziplite-checkbox:checked');
+        const checkboxes = document.querySelectorAll(
+            ".gitziplite-checkbox:checked"
+        );
 
-        checkboxes.forEach(checkbox => {
+        checkboxes.forEach((checkbox) => {
             const row = checkbox.parentNode.parentNode; // Direct parent access
             if (!row) {
                 console.warn("Could not find a parent row for a selected checkbox.");
@@ -288,19 +316,19 @@
             console.debug(row);
             let link;
 
-            if (row.tagName === 'TD') {
-                link = row.querySelector('a[href]');
+            if (row.tagName === "TD") {
+                link = row.querySelector("a[href]");
             } else {
-                link = row.querySelector('a[href]');
+                link = row.querySelector("a[href]");
             }
 
             if (link) {
                 const href = link.href;
                 const title = link.textContent.trim();
                 const resolved = parseRepoURL(href);
-                if (resolved && resolved.type === 'blob') {
+                if (resolved && resolved.type === "blob") {
                     selectedFiles.push({ href: href, title: title });
-                } else if (resolved && resolved.type === 'tree') {
+                } else if (resolved && resolved.type === "tree") {
                     selectedFolders.push({ href: href, title: title });
                 }
             }
@@ -310,33 +338,62 @@
     }
 
     /**
-     * Zips the given contents and triggers a download.
-     * @param {Array<{path: string, content: string}>} allContents - Array of file contents to zip.
-     * @param {object} resolvedUrl - Parsed URL information of the repository.
-     */
+   * Zips the given contents and triggers a download.
+   * @param {Array<{path: string, content: string}>} allContents - Array of file contents to zip.
+   * @param {object} resolvedUrl - Parsed URL information of the repository.
+   */
     function zipAndDownload(allContents, resolvedUrl) {
         if (allContents.length === 1) {
-            // If only one file is selected, download it directly
+            // Handle single file download
             const singleItem = allContents[0];
-            const blob = base64toBlob(singleItem.content, '');
-            saveAs(blob, singleItem.path);
+            console.debug(singleItem);
+            if (singleItem.isBinary) {
+                // Create Blob directly from Uint8Array
+                const blob = new Blob([singleItem.content], {
+                    type: "application/octet-stream",
+                });
+                saveAs(blob, singleItem.path);
+            } else {
+                // Handle base64 encoded text files
+                const blob = base64toBlob(singleItem.content, "");
+                saveAs(blob, singleItem.path);
+            }
         } else {
-            // If multiple files are selected, zip them
+            // Handle zip archive creation
             try {
                 const currDate = new Date();
-                const dateWithOffset = new Date(currDate.getTime() - currDate.getTimezoneOffset() * 60000);
+                const dateWithOffset = new Date(
+                    currDate.getTime() - currDate.getTimezoneOffset() * 60000
+                );
                 window.JSZip.defaults.date = dateWithOffset;
 
                 const zip = new window.JSZip();
-                allContents.forEach(item => {
-                    zip.file(item.path, item.content, { createFolders: true, base64: true });
+                allContents.forEach((item) => {
+                    if (item.isBinary) {
+                        // Add binary file as Uint8Array
+                        zip.file(item.path, item.content, {
+                            createFolders: true,
+                            binary: true,
+                            date: dateWithOffset,
+                        });
+                    } else {
+                        // Add base64 encoded file
+                        zip.file(item.path, item.content, {
+                            createFolders: true,
+                            base64: true,
+                            date: dateWithOffset,
+                        });
+                    }
                 });
 
-                zip.generateAsync({ type: "blob" })
-                    .then(content => {
-                    saveAs(content, [resolvedUrl.project].concat(resolvedUrl.path.split('/')).join('-') + ".zip");
+                zip.generateAsync({ type: "blob" }).then((content) => {
+                    saveAs(
+                        content,
+                        [resolvedUrl.project]
+                        .concat(resolvedUrl.path.split("/"))
+                        .join("-") + ".zip"
+                    );
                 });
-
             } catch (error) {
                 console.debug("Error zipping files:", error);
                 logMessage("Error zipping files.");
@@ -345,10 +402,11 @@
     }
 
     async function downloadSelected() {
-        const { files: selectedFiles, folders: selectedFolders } = collectSelectedItems();
+        const { files: selectedFiles, folders: selectedFolders } =
+              collectSelectedItems();
 
         if (selectedFiles.length === 0 && selectedFolders.length === 0) {
-            logMessage('No files or folders selected.');
+            logMessage("No files or folders selected.");
             return;
         }
 
@@ -361,7 +419,9 @@
         const githubToken = GM_getValue(tokenKey);
 
         if (!githubToken) {
-            logMessage("GitHub API token is not set. Please set it in the Tampermonkey dashboard.");
+            logMessage(
+                "GitHub API token is not set. Please set it in the Tampermonkey dashboard."
+            );
             return;
         }
 
@@ -370,7 +430,12 @@
         async function processFolder(folder, pathPrefix = "") {
             logMessage(`Processing folder: ${folder.title}`);
             const folderResolvedUrl = parseRepoURL(folder.href);
-            const apiUrl = getInfoURL(folderResolvedUrl.author, folderResolvedUrl.project, folderResolvedUrl.path, folderResolvedUrl.branch);
+            const apiUrl = getInfoURL(
+                folderResolvedUrl.author,
+                folderResolvedUrl.project,
+                folderResolvedUrl.path,
+                folderResolvedUrl.branch
+            );
 
             try {
                 const xmlResponse = await callAjax(apiUrl, githubToken);
@@ -378,17 +443,25 @@
 
                 for (const item of folderContents) {
                     const itemPath = pathPrefix + "/" + item.name;
-                    if (item.type === 'file') {
+                    if (item.type === "file") {
                         logMessage(`Processing file: ${itemPath}`);
-                        const fileInfoUrl = getInfoURL(folderResolvedUrl.author, folderResolvedUrl.project, folderResolvedUrl.path + "/" + item.name, folderResolvedUrl.branch);
+                        const fileInfoUrl = getInfoURL(
+                            folderResolvedUrl.author,
+                            folderResolvedUrl.project,
+                            folderResolvedUrl.path + "/" + item.name,
+                            folderResolvedUrl.branch
+                        );
                         const fileXmlResponse = await callAjax(fileInfoUrl, githubToken);
                         const fileContent = fileXmlResponse.response;
                         allContents.push({
                             path: itemPath,
-                            content: fileContent.content
+                            content: fileContent.content,
                         });
-                    } else if (item.type === 'dir') {
-                        await processFolder({ href: folder.href + "/" + item.name, title: item.name }, itemPath);
+                    } else if (item.type === "dir") {
+                        await processFolder(
+                            { href: folder.href + "/" + item.name, title: item.name },
+                            itemPath
+                        );
                     }
                 }
             } catch (error) {
@@ -404,15 +477,36 @@
         for (const file of selectedFiles) {
             logMessage(`Processing file: ${file.title}`);
             const fileResolvedUrl = parseRepoURL(file.href);
-            const infoUrl = getInfoURL(fileResolvedUrl.author, fileResolvedUrl.project, fileResolvedUrl.path, fileResolvedUrl.branch);
-
+            const infoUrl = getInfoURL(
+                fileResolvedUrl.author,
+                fileResolvedUrl.project,
+                fileResolvedUrl.path,
+                fileResolvedUrl.branch
+            );
+            logMessage(`file info url: ${infoUrl}`);
+            console.debug(`file info url: ${infoUrl}`);
             try {
                 const xmlResponse = await callAjax(infoUrl, githubToken);
                 const fileContent = xmlResponse.response;
-                allContents.push({
-                    path: file.title,
-                    content: fileContent.content
-                });
+
+                if (fileContent.encoding === "base64" && fileContent.content) {
+                    allContents.push({
+                        path: file.title,
+                        content: fileContent.content,
+                        isBinary: false,
+                    });
+                } else if (fileContent.download_url) {
+                    // Handle binary file with dedicated download function
+                    const binaryData = await downloadFile(
+                        fileContent.download_url,
+                        githubToken
+                    );
+                    allContents.push({
+                        path: file.title,
+                        content: binaryData,
+                        isBinary: true,
+                    });
+                }
             } catch (error) {
                 console.debug("Error fetching file:", file.title, error);
                 logMessage(`Error fetching file: ${file.title}`);
@@ -425,11 +519,11 @@
     }
 
     // Register menu command for setting token
-    GM_registerMenuCommand('Set GitHub API Token', () => {
-        const token = prompt('Enter your GitHub API token:');
+    GM_registerMenuCommand("Set GitHub API Token", () => {
+        const token = prompt("Enter your GitHub API token:");
         if (token) {
             GM_setValue(tokenKey, token);
-            alert('Token saved successfully!');
+            alert("Token saved successfully!");
         }
     });
 
@@ -446,39 +540,38 @@
     onDomLoaded();
     // Glitch Animation
     PowerGlitch.glitch(logToggleButton, {
-        playMode: 'click',
+        playMode: "click",
         timing: {
             duration: 400,
-            easing: 'ease-in-out',
+            easing: "ease-in-out",
         },
         shake: {
             velocity: 20,
             amplitudeX: 0,
-            amplitudeY: 0.1
+            amplitudeY: 0.1,
         },
     });
-    PowerGlitch.glitch(logWindow,{
-        playMode: 'hover',
+    PowerGlitch.glitch(logWindow, {
+        playMode: "hover",
         timing: {
             duration: 450,
-            easing: 'ease-in-out',
+            easing: "ease-in-out",
         },
         shake: {
             velocity: 20,
             amplitudeX: 0.1,
-            amplitudeY: 0
+            amplitudeY: 0,
         },
     });
     PowerGlitch.glitch(downloadButton, {
-        playMode: 'click',
+        playMode: "click",
         timing: {
             duration: 400,
-            easing: 'ease-in-out',
+            easing: "ease-in-out",
         },
     });
 
     // Observe GitHub repository page URL changes (e.g., navigating into a new directory)
     const observer = new MutationObserver(onUrlChange);
     observer.observe(document.body, { childList: true, subtree: true });
-
 })();
