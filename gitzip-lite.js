@@ -2,9 +2,11 @@
 // @name         GitZip Lite
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=github.com
 // @namespace    https://github.com/tizee/tempermonkey-gitzip-lite
-// @version      1.6
+// @version      1.6.1
 // @description  Download selected files and folders from GitHub repositories.
 // @author       tizee
+// @downloadURL  https://raw.githubusercontent.com/tizee/tempermonkey-gitzip-lite/main/gitzip-lite.js
+// @updateURL    https://raw.githubusercontent.com/tizee/tempermonkey-gitzip-lite/main/gitzip-lite.js
 // @match        https://github.com/*/*
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
