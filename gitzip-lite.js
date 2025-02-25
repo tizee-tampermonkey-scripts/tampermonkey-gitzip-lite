@@ -2,7 +2,7 @@
 // @name         GitZip Lite
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=github.com
 // @namespace    https://github.com/tizee-tampermonkey-scripts/tampermonkey-gitzip-lite
-// @version      1.6.2
+// @version      1.6.3
 // @description  Download selected files and folders from GitHub repositories.
 // @author       tizee
 // @downloadURL  https://raw.githubusercontent.com/tizee-tampermonkey-scripts/tempermonkey-gitzip-lite/main/gitzip-lite.js
@@ -121,11 +121,12 @@
             }
           } else {
             console.debug("Request failed with status:", response.status);
+            logMessage("ERROR", `Request failed with status: ${response.status}`);
             reject(response);
           }
         },
         onerror: function (error) {
-          console.debug("Request failed:", error);
+          logMessage("ERROR", error);
           reject(error);
         },
       });
@@ -233,6 +234,8 @@
   let logWindow;
   let logToggleButton;
   let downloadButton;
+  let mainContainer;
+  let stickerButton;
 
   // Add global styles
   GM_addStyle(`
@@ -250,6 +253,54 @@
         backdrop-filter: blur(20px);
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
         border: 1px solid rgba(255, 255, 255, 0.08);
+        display: none; /* Hide window by default */
+    }
+
+    /* Sidebar sticker button */
+    .gitziplite-sticker-button {
+        position: fixed;
+        right: 0;
+        top: 30%;
+        background-color: rgba(28, 28, 30, 0.95);
+        color: white;
+        border-radius: 8px 0 0 8px;
+        padding: 10px;
+        cursor: pointer;
+        z-index: 999;
+        box-shadow: -2px 0 8px rgba(0, 0, 0, 0.2);
+        transition: all 0.2s ease;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-right: none;
+    }
+
+    .gitziplite-sticker-button:hover {
+        background-color: rgba(40, 40, 45, 0.95);
+        transform: translateX(-2px);
+    }
+
+    /* Hide button for the container */
+    .gitziplite-hide-button {
+        position: absolute;
+        top: -14px;
+        right: -14px;
+        width: 28px;
+        height: 28px;
+        border-radius: 14px;
+        background-color: rgba(28, 28, 30, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s ease;
+        z-index: 1001;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .gitziplite-hide-button:hover {
+        background-color: rgba(40, 40, 45, 0.95);
     }
 
     /* Log Window Styles */
@@ -391,9 +442,38 @@
   `);
 
   function createDownloadButton() {
+    // Create sticker button for the sidebar
+    stickerButton = document.createElement("div");
+    stickerButton.className = "gitziplite-sticker-button";
+    stickerButton.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <svg width="16" height="16" viewBox="0 0 16 16" style="margin-bottom: 8px;">
+                <path fill="currentColor" d="M8 12l-4.5-4.5 1.5-1.5L7 8.25V2h2v6.25L11 6l1.5 1.5L8 12zm-6 2v-2h12v2H2z"></path>
+            </svg>
+            <div style="writing-mode: vertical-lr; transform: rotate(180deg); font-size: 12px; letter-spacing: 1px; margin-top: 5px;">GitZip</div>
+        </div>
+    `;
+    stickerButton.setAttribute("title", "Show GitZip Download Window");
+    stickerButton.addEventListener("click", () => {
+      mainContainer.style.display = "block";
+      stickerButton.style.display = "none";
+    });
+    document.body.appendChild(stickerButton);
+
     // Main container
-    const mainContainer = document.createElement("div");
+    mainContainer = document.createElement("div");
     mainContainer.className = "gitziplite-container";
+
+    // Hide button
+    const hideButton = document.createElement("button");
+    hideButton.className = "gitziplite-hide-button";
+    hideButton.innerHTML = "✕";
+    hideButton.setAttribute("title", "Hide Download Window");
+    hideButton.addEventListener("click", () => {
+      mainContainer.style.display = "none";
+      stickerButton.style.display = "block";
+    });
+    mainContainer.appendChild(hideButton);
 
     // Log Window Container
     logWindow = document.createElement("div");
@@ -428,6 +508,10 @@
     mainContainer.appendChild(logWindow);
     mainContainer.appendChild(buttonContainer);
     document.body.appendChild(mainContainer);
+
+    // Hide the window by default
+    mainContainer.style.display = "none";
+    stickerButton.style.display = "block";
   }
 
   function logMessage(command, content) {
@@ -583,14 +667,6 @@
     }
 
     const githubToken = GM_getValue(tokenKey);
-
-    if (!githubToken) {
-      logMessage(
-        "ERROR",
-        "GitHub API token is not set. Please set it in the Tampermonkey dashboard."
-      );
-      return;
-    }
 
     const allContents = [];
 
