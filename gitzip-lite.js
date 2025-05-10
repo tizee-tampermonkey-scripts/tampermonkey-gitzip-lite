@@ -5,8 +5,8 @@
 // @version      1.6.3
 // @description  Download selected files and folders from GitHub repositories.
 // @author       tizee
-// @downloadURL  https://raw.githubusercontent.com/tizee-tampermonkey-scripts/tampermonkey-gitzip-lite.tizee-tampermonkey-scripts/refs/heads/main/gitzip-lite.js
-// @updateURL    https://raw.githubusercontent.com/tizee-tampermonkey-scripts/tampermonkey-gitzip-lite.tizee-tampermonkey-scripts/refs/heads/main/gitzip-lite.js
+// @downloadURL  https://raw.githubusercontent.com/tizee-tampermonkey-scripts/tampermonkey-gitzip-lite/refs/heads/main/gitzip-lite.js
+// @updateURL    https://raw.githubusercontent.com/tizee-tampermonkey-scripts/tampermonkey-gitzip-lite/refs/heads/main/gitzip-lite.js
 // @match        https://github.com/*/*
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
